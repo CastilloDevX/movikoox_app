@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   StyleSheet,
   Text,
@@ -10,16 +11,28 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 
+import { Parada } from "@/app/models/parada.model";
+import { getParaderoCercano } from "@/app/services/movikoox.api";
+
 export default function HomeScreen() {
   const [location, setLocation] =
     useState<Location.LocationObject | null>(null);
+  const [paradero, setParadero] = useState<Parada | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const mapRef = useRef<MapView | null>(null);
+  /* ===========================
+     OBTENER UBICACIÓN + PARADERO
+  =========================== */
+  const loadCurrentLocation = async () => {
+    setLoading(true);
 
-  const fetchCurrentLocation = async () => {
     const { status } =
       await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
+    if (status !== "granted") {
+      setLoading(false);
+      return;
+    }
 
     const loc = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
@@ -27,29 +40,40 @@ export default function HomeScreen() {
 
     setLocation(loc);
 
-    mapRef.current?.animateToRegion({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    });
+    try {
+      const res = await getParaderoCercano(
+        loc.coords.latitude,
+        loc.coords.longitude
+      );
+
+      setParadero(res.parada);
+      setDistanceKm(res.distance_km);
+    } catch (error) {
+      console.error("Error obteniendo paradero cercano", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  /* ===========================
+     CARGA INICIAL
+  =========================== */
   useEffect(() => {
-    fetchCurrentLocation();
+    loadCurrentLocation();
   }, []);
 
   return (
     <View style={styles.container}>
       {/* MAPA */}
       <MapView
-        ref={mapRef}
         style={styles.map}
         initialRegion={{
-          latitude: 19.830211,
-          longitude: -90.515757,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitude:
+            location?.coords.latitude ?? 19.830211,
+          longitude:
+            location?.coords.longitude ?? -90.515757,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
         }}
       >
         {location && (
@@ -58,6 +82,18 @@ export default function HomeScreen() {
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
             }}
+            title="Tu ubicación"
+          />
+        )}
+
+        {paradero && (
+          <Marker
+            coordinate={{
+              latitude: paradero.latitud,
+              longitude: paradero.longitud,
+            }}
+            title={paradero.nombre}
+            description="Paradero más cercano"
           />
         )}
       </MapView>
@@ -68,15 +104,34 @@ export default function HomeScreen() {
           source={require("../../assets/kooxbus_icon.png")}
           style={styles.busIcon}
         />
-        <View>
-          <Text style={styles.topTitle}>Paradero más cercano</Text>
-          <Text style={styles.topSubtitle}>Chihuahua</Text>
-        </View>
+
+        {loading ? (
+          <ActivityIndicator />
+        ) : paradero ? (
+          <View>
+            <Text style={styles.topTitle}>
+              Paradero más cercano
+            </Text>
+            <Text style={styles.topSubtitle}>
+              {paradero.nombre}
+            </Text>
+
+            {distanceKm !== null && (
+              <Text style={styles.distanceText}>
+                A {Math.round(distanceKm * 1000)} m
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text>No se pudo obtener el paradero</Text>
+        )}
       </View>
 
       {/* BUSCADOR */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchTitle}>¿A dónde quieres ir?</Text>
+        <Text style={styles.searchTitle}>
+          ¿A dónde quieres ir?
+        </Text>
 
         <View style={styles.inputWrapper}>
           <TextInput
@@ -88,7 +143,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={styles.currentLocationButton}
-          onPress={fetchCurrentLocation}
+          onPress={loadCurrentLocation}
         >
           <Image
             source={require("../../assets/location.png")}
@@ -98,17 +153,18 @@ export default function HomeScreen() {
             Usar ubicación actual
           </Text>
         </TouchableOpacity>
-
       </View>
     </View>
   );
 }
 
+/* ===========================
+   STYLES
+=========================== */
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
 
-  /* ================= TOP CARD ================= */
   topCard: {
     position: "absolute",
     top: 16,
@@ -136,6 +192,12 @@ const styles = StyleSheet.create({
   topSubtitle: {
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  distanceText: {
+    fontSize: 12,
+    color: "#555",
+    marginTop: 2,
   },
 
   /* ================= SEARCH CARD ================= */
@@ -186,11 +248,6 @@ const styles = StyleSheet.create({
     height: 18,
     marginRight: 10,
     tintColor: "#fff",
-  },
-
-  currentLocationIcon: {
-    fontSize: 16,
-    marginRight: 8,
   },
 
   currentLocationText: {
