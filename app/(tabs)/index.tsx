@@ -1,11 +1,11 @@
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,6 +15,8 @@ import { Parada } from "@/app/models/parada.model";
 import { getParaderoCercano } from "@/app/services/movikoox.api";
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const [location, setLocation] =
     useState<Location.LocationObject | null>(null);
   const [paradero, setParadero] = useState<Parada | null>(null);
@@ -55,9 +57,6 @@ export default function HomeScreen() {
     }
   };
 
-  /* ===========================
-     CARGA INICIAL
-  =========================== */
   useEffect(() => {
     loadCurrentLocation();
   }, []);
@@ -68,10 +67,8 @@ export default function HomeScreen() {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude:
-            location?.coords.latitude ?? 19.830211,
-          longitude:
-            location?.coords.longitude ?? -90.515757,
+          latitude: location?.coords.latitude ?? 19.830211,
+          longitude: location?.coords.longitude ?? -90.515757,
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
@@ -94,8 +91,16 @@ export default function HomeScreen() {
             }}
             title={paradero.nombre}
             description="Paradero más cercano"
-          />
+          >
+            <View style={styles.busStopMarker}>
+              <Image
+                source={require("../../assets/bus_stop.png")}
+                style={styles.busStopIcon}
+              />
+            </View>
+          </Marker>
         )}
+
       </MapView>
 
       {/* CARD SUPERIOR */}
@@ -109,12 +114,8 @@ export default function HomeScreen() {
           <ActivityIndicator />
         ) : paradero ? (
           <View>
-            <Text style={styles.topTitle}>
-              Paradero más cercano
-            </Text>
-            <Text style={styles.topSubtitle}>
-              {paradero.nombre}
-            </Text>
+            <Text style={styles.topTitle}>Paradero más cercano</Text>
+            <Text style={styles.topSubtitle}>{paradero.nombre}</Text>
 
             {distanceKm !== null && (
               <Text style={styles.distanceText}>
@@ -133,14 +134,17 @@ export default function HomeScreen() {
           ¿A dónde quieres ir?
         </Text>
 
-        <View style={styles.inputWrapper}>
-          <TextInput
-            placeholder="Buscar destino"
-            placeholderTextColor="#888"
-            style={styles.input}
-          />
-        </View>
+        {/* BOTÓN BUSCAR */}
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={() => router.push("/search")}
+        >
+          <Text style={styles.searchButtonText}>
+            Buscar destino
+          </Text>
+        </TouchableOpacity>
 
+        {/* UBICACIÓN ACTUAL */}
         <TouchableOpacity
           style={styles.currentLocationButton}
           onPress={loadCurrentLocation}
@@ -200,6 +204,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  /* ============== CUSTOM MAP MARKER =============== */
+
+  busStopMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 21,
+    backgroundColor: "#7A1F33",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    elevation: 0,
+  },
+
+  busStopIcon: {
+    width: 22,
+    height: 22,
+    tintColor: "#fff",
+  },
+
+
   /* ================= SEARCH CARD ================= */
   searchContainer: {
     position: "absolute",
@@ -220,20 +245,20 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  inputWrapper: {
+  searchButton: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 46,
-    justifyContent: "center",
+    paddingVertical: 14,
+    alignItems: "center",
     marginBottom: 14,
   },
 
-  input: {
-    fontSize: 15,
+  searchButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#7A1F33",
   },
 
-  /* ================= LOCATION BUTTON ================= */
   currentLocationButton: {
     flexDirection: "row",
     alignItems: "center",

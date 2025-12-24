@@ -40,7 +40,7 @@ export interface BusInstruction {
   to_stop: Parada;
 }
 
-export type Instruction = WalkInstruction | BusInstruction;
+export type Instruccion = WalkInstruction | BusInstruction;
 
 /* ===========================
    RESUMEN
