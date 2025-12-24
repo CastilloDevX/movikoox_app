@@ -1,29 +1,69 @@
-import { Link } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Link } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ModalScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">This is a modal</ThemedText>
-      <Link href="/" dismissTo style={styles.link}>
-        <ThemedText type="link">Go to home screen</ThemedText>
+    <View style={styles.container}>
+      <Text style={styles.title}>Movikoox</Text>
+
+      <Text style={styles.text}>
+        Proyecto ciudadano para mejorar el acceso a la información del
+        transporte público en Campeche.
+      </Text>
+
+      <Text style={styles.warning}>
+        ⚠️ Esta aplicación NO es oficial y no tiene relación con el gobierno.
+        Proyecto en fase BETA. ⚠️
+      </Text>
+
+      <Link href="/" dismissTo asChild>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>Entendido</Text>
+        </TouchableOpacity>
       </Link>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    padding: 24,
+    justifyContent: "center",
+    backgroundColor: "#fff",
   },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    marginBottom: 16,
+    color: "#7A1F33",
+    textAlign: "center",
+  },
+
+  text: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+
+  warning: {
+    fontSize: 14,
+    color: "#a00",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+
+  button: {
+    backgroundColor: "#7A1F33",
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

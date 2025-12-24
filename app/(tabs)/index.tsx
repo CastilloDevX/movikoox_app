@@ -1,98 +1,201 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [location, setLocation] =
+    useState<Location.LocationObject | null>(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const mapRef = useRef<MapView | null>(null);
+
+  const fetchCurrentLocation = async () => {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") return;
+
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    setLocation(loc);
+
+    mapRef.current?.animateToRegion({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    });
+  };
+
+  useEffect(() => {
+    fetchCurrentLocation();
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      {/* MAPA */}
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={{
+          latitude: 19.830211,
+          longitude: -90.515757,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+      >
+        {location && (
+          <Marker
+            coordinate={{
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            }}
+          />
+        )}
+      </MapView>
+
+      {/* CARD SUPERIOR */}
+      <View style={styles.topCard}>
+        <Image
+          source={require("../../assets/kooxbus_icon.png")}
+          style={styles.busIcon}
+        />
+        <View>
+          <Text style={styles.topTitle}>Paradero más cercano</Text>
+          <Text style={styles.topSubtitle}>Chihuahua</Text>
+        </View>
+      </View>
+
+      {/* BUSCADOR */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchTitle}>¿A dónde quieres ir?</Text>
+
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Buscar destino"
+            placeholderTextColor="#888"
+            style={styles.input}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.currentLocationButton}
+          onPress={fetchCurrentLocation}
+        >
+          <Image
+            source={require("../../assets/location.png")}
+            style={styles.locationIcon}
+          />
+          <Text style={styles.currentLocationText}>
+            Usar ubicación actual
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1 },
+  map: { flex: 1 },
+
+  /* ================= TOP CARD ================= */
+  topCard: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 6,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  busIcon: {
+    width: 42,
+    height: 42,
+    marginRight: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
+
+  topTitle: {
+    fontSize: 12,
+    color: "#777",
+  },
+
+  topSubtitle: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  /* ================= SEARCH CARD ================= */
+  searchContainer: {
+    position: "absolute",
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    right: 0,
+    backgroundColor: "#7A1F33",
+    padding: 25,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+  },
+
+  searchTitle: {
+    color: "#fff",
+    fontSize: 20,
+    textAlign: "center",
+    fontWeight: "700",
+    marginBottom: 14,
+  },
+
+  inputWrapper: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+
+  input: {
+    fontSize: 15,
+  },
+
+  /* ================= LOCATION BUTTON ================= */
+  currentLocationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#8F2B45",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+
+  locationIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 10,
+    tintColor: "#fff",
+  },
+
+  currentLocationIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  currentLocationText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
