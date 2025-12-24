@@ -64,6 +64,6 @@ export interface InstructionSummary {
 export interface InstruccionesResponse {
   ok: boolean;
   isAprox: boolean;
-  instructions: Instruction[];
+  instructions: Instruccion[];
   summary: InstructionSummary;
 }

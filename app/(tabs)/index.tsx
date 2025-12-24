@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -63,6 +64,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light"/>
       {/* MAPA */}
       <MapView
         style={styles.map}
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
 
   topCard: {
     position: "absolute",
-    top: 16,
+    top: 50,
     left: 16,
     right: 16,
     backgroundColor: "#fff",
@@ -266,6 +268,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
+    marginBottom: 35,
   },
 
   locationIcon: {

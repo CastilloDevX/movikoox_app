@@ -23,7 +23,6 @@ const apiClient = axios.create({
 export async function searchLocationCampeche(
   query: string
 ): Promise<LocationResult[]> {
-  // Siempre devolver un array
   if (!query || query.trim().length < 3) {
     return [];
   }
@@ -43,6 +42,11 @@ export async function searchLocationCampeche(
       },
     });
 
+    // Si no hay resultados
+    if (!Array.isArray(response.data)) {
+      return [];
+    }
+
     return response.data.map(item => ({
       lat: Number(item.lat),
       lon: Number(item.lon),
@@ -50,10 +54,19 @@ export async function searchLocationCampeche(
       direccionCompleta: item.display_name,
     }));
   } catch (error: any) {
+    // Silenciar "Unable to geocode" un error cuando no hay resultados
+    if (
+      error?.response?.data?.error === "Unable to geocode"
+    ) {
+      return [];
+    }
+
+    // Solo logueamos errores reales
     console.error(
-      "Error en geocodificación:",
+      "Error real en geocodificación:",
       error?.response?.data || error.message
     );
+
     return [];
   }
 }
