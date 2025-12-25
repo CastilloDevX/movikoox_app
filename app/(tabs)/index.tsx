@@ -1,7 +1,7 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -17,74 +17,110 @@ import { getParaderoCercano } from "@/app/services/movikoox.api";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const mapRef = useRef<MapView>(null);
 
   const [location, setLocation] =
     useState<Location.LocationObject | null>(null);
   const [paradero, setParadero] = useState<Parada | null>(null);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   /* ===========================
-     OBTENER UBICACIÓN + PARADERO
+     UBICACIÓN EN TIEMPO REAL
   =========================== */
-  const loadCurrentLocation = async () => {
-    setLoading(true);
-
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      setLoading(false);
-      return;
-    }
-
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-
-    setLocation(loc);
-
-    try {
-      const res = await getParaderoCercano(
-        loc.coords.latitude,
-        loc.coords.longitude
-      );
-
-      setParadero(res.parada);
-      setDistanceKm(res.distance_km);
-    } catch (error) {
-      console.error("Error obteniendo paradero cercano", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadCurrentLocation();
+    let subscription: Location.LocationSubscription | null = null;
+
+    const startTracking = async () => {
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLoading(false);
+        return;
+      }
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 2000,
+          distanceInterval: 5,
+        },
+        async (loc) => {
+          setLocation(loc);
+
+          try {
+            const res = await getParaderoCercano(
+              loc.coords.latitude,
+              loc.coords.longitude
+            );
+
+            setParadero(res.parada);
+            setDistanceKm(res.distance_km);
+          } catch (e) {
+            console.log("Error paradero cercano", e);
+          }
+
+          setLoading(false);
+        }
+      );
+    };
+
+    startTracking();
+
+    return () => {
+      subscription?.remove();
+    };
   }, []);
+
+  /* ===========================
+     RECENTRAR MAPA
+  =========================== */
+  const focusUser = () => {
+    if (!location) return;
+
+    mapRef.current?.animateToRegion(
+      {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.015,
+        longitudeDelta: 0.015,
+      },
+      500
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light"/>
-      {/* MAPA */}
+      <StatusBar style="light" />
+
+      {/* ================= MAPA ================= */}
       <MapView
+        ref={mapRef}
         style={styles.map}
+        showsUserLocation={false}
         initialRegion={{
-          latitude: location?.coords.latitude ?? 19.830211,
-          longitude: location?.coords.longitude ?? -90.515757,
+          latitude: 19.830211,
+          longitude: -90.515757,
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
       >
+        {/* === USUARIO (MISMO ICONO QUE INSTRUCTIONS) === */}
         {location && (
           <Marker
             coordinate={{
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
             }}
-            title="Tu ubicación"
-          />
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={styles.userMarker}>
+              <View style={styles.userMarkerInner} />
+            </View>
+          </Marker>
         )}
 
+        {/* === PARADERO MÁS CERCANO === */}
         {paradero && (
           <Marker
             coordinate={{
@@ -92,7 +128,6 @@ export default function HomeScreen() {
               longitude: paradero.longitud,
             }}
             title={paradero.nombre}
-            description="Paradero más cercano"
           >
             <View style={styles.busStopMarker}>
               <Image
@@ -102,10 +137,9 @@ export default function HomeScreen() {
             </View>
           </Marker>
         )}
-
       </MapView>
 
-      {/* CARD SUPERIOR */}
+      {/* ================= CARD SUPERIOR ================= */}
       <View style={styles.topCard}>
         <Image
           source={require("../../assets/kooxbus_icon.png")}
@@ -130,13 +164,23 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* BUSCADOR */}
+      {/* ================= BOTÓN BUSES ================= */}
+      <TouchableOpacity
+        style={styles.buses}
+        onPress={() => router.push("/list_buses")}
+      >
+        <Image
+          source={require("../../assets/bus_stop.png")}
+          style={styles.buses_icon}
+        />
+      </TouchableOpacity>
+
+      {/* ================= SEARCH CARD ================= */}
       <View style={styles.searchContainer}>
         <Text style={styles.searchTitle}>
           ¿A dónde quieres ir?
         </Text>
 
-        {/* BOTÓN BUSCAR */}
         <TouchableOpacity
           style={styles.searchButton}
           onPress={() => router.push("/search")}
@@ -146,17 +190,16 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* UBICACIÓN ACTUAL */}
         <TouchableOpacity
           style={styles.currentLocationButton}
-          onPress={loadCurrentLocation}
+          onPress={focusUser}
         >
           <Image
             source={require("../../assets/location.png")}
             style={styles.locationIcon}
           />
           <Text style={styles.currentLocationText}>
-            Usar ubicación actual
+            Ubicación actual
           </Text>
         </TouchableOpacity>
       </View>
@@ -190,24 +233,32 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  topTitle: {
-    fontSize: 12,
-    color: "#777",
+  topTitle: { fontSize: 12, color: "#777" },
+  topSubtitle: { fontSize: 16, fontWeight: "600" },
+  distanceText: { fontSize: 12, color: "#555" },
+
+  /* === USER MARKER (IGUAL AL DE INSTRUCTIONS) === */
+  userMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#4A90E2",
+    borderWidth: 3,
+    borderColor: "#fff",
+    elevation: 5,
   },
 
-  topSubtitle: {
-    fontSize: 16,
-    fontWeight: "600",
+  userMarkerInner: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#2E5FA3",
+    position: "absolute",
+    top: 3,
+    left: 3,
   },
 
-  distanceText: {
-    fontSize: 12,
-    color: "#555",
-    marginTop: 2,
-  },
-
-  /* ============== CUSTOM MAP MARKER =============== */
-
+  /* === BUS STOP === */
   busStopMarker: {
     width: 36,
     height: 36,
@@ -217,7 +268,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#fff",
-    elevation: 0,
   },
 
   busStopIcon: {
@@ -226,8 +276,6 @@ const styles = StyleSheet.create({
     tintColor: "#fff",
   },
 
-
-  /* ================= SEARCH CARD ================= */
   searchContainer: {
     position: "absolute",
     bottom: 0,
@@ -237,6 +285,7 @@ const styles = StyleSheet.create({
     padding: 25,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
+    paddingBottom: 60,
   },
 
   searchTitle: {
@@ -268,7 +317,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    marginBottom: 35,
   },
 
   locationIcon: {
@@ -282,5 +330,19 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "500",
+  },
+
+  buses: {
+    position: "absolute",
+    bottom: 250,
+    right: 20,
+    backgroundColor: "#7A1F33",
+    padding: 10,
+    borderRadius: 10,
+  },
+
+  buses_icon: {
+    width: 40,
+    height: 40,
   },
 });

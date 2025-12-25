@@ -1,5 +1,6 @@
 import { InstruccionesResponse } from "@/app/models/instrucciones.model";
 import { Parada, ParaderoCercanoResponse } from "@/app/models/parada.model";
+import { Ruta } from "@/app/models/ruta.model";
 import axios from "axios";
 
 /* ===========================
@@ -84,4 +85,9 @@ export async function getInstrucciones(
   });
 
   return res.data;
+}
+
+export async function getRutas(): Promise<Ruta[]> {
+  const res = await api.get("/rutas");
+  return res.data.body;
 }
