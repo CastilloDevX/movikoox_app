@@ -7,7 +7,6 @@
     "icon": "./assets/movikoox_logo.png",
     "scheme": "movikooxapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "android": {
       "package": "com.movikoox.app",
       "versionCode": 1,

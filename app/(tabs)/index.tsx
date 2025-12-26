@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 import { Parada } from "@/app/models/parada.model";
 import { getParaderoCercano } from "@/app/services/movikoox.api";
@@ -96,8 +96,8 @@ export default function HomeScreen() {
       {/* ================= MAPA ================= */}
       <MapView
         ref={mapRef}
+        provider={PROVIDER_GOOGLE}
         style={styles.map}
-        showsUserLocation={false}
         initialRegion={{
           latitude: 19.830211,
           longitude: -90.515757,
@@ -105,6 +105,7 @@ export default function HomeScreen() {
           longitudeDelta: 0.02,
         }}
       >
+
         {/* === USUARIO (MISMO ICONO QUE INSTRUCTIONS) === */}
         {location && (
           <Marker

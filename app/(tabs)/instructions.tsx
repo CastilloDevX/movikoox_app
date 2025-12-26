@@ -43,6 +43,8 @@ export default function InstructionsScreen() {
             }
         };
     }, []);
+    
+    const currentStep = steps[currentStepIndex];
 
     useEffect(() => {
         if (currentStep && userLocation) {
@@ -154,8 +156,6 @@ export default function InstructionsScreen() {
             setCurrentStepIndex(currentStepIndex - 1);
         }
     };
-
-    const currentStep = steps[currentStepIndex];
 
     return (
         <View style={styles.container}>
